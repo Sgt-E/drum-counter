@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Drum Counter">
+    <meta name="theme-color" content="#000000">
+    <link rel="manifest" href="manifest.json">
+    <title>Drum Counter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #000;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .count-container {
+            display: flex;
+            justify-content: center;
+            align-items: baseline;
+            margin-bottom: 30px;
+            min-height: 15rem;
+        }
+
+        .count-number {
+            font-size: 15rem;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+            font-family: 'Courier New', monospace;
+            width: 1ch;
+            text-align: center;
+        }
+
+        .count-suffix {
+            font-size: 8rem;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+            font-family: 'Courier New', monospace;
+            width: 1ch;
+            text-align: left;
+            margin-left: 0.1em;
+        }
+
+        .beat-indicators {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        .beat-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #333;
+            transition: all 0.15s ease;
+        }
+
+        .beat-dot.active {
+            background-color: white;
+            transform: scale(1.3);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+        }
+
+        .beat-dot.downbeat.active {
+            background-color: #ff4444;
+            box-shadow: 0 0 15px rgba(255, 68, 68, 0.8);
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .tempo-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .bpm-display {
+            font-size: 1.5rem;
+            font-weight: bold;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .bpm-slider {
+            width: 200px;
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .bpm-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .subdivision-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .subdivision-btn {
+            padding: 10px 20px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .subdivision-btn.active {
+            background: #666;
+            color: white;
+        }
+
+        .main-controls {
+            display: flex;
+            gap: 20px;
+        }
+
+        .control-btn {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: 2px solid white;
+            background: transparent;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 120px;
+        }
+
+        .control-btn:hover {
+            background: white;
+            color: black;
+        }
+
+        .control-btn.active {
+            background: #ff4444;
+            border-color: #ff4444;
+        }
+
+        @media (max-width: 768px) {
+            .count-number {
+                font-size: 12rem;
+            }
+            
+            .count-suffix {
+                font-size: 6rem;
+            }
+            
+            .controls {
+                padding: 0 20px;
+            }
+            
+            .bpm-slider {
+                width: 150px;
+            }
+            
+            .main-controls {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            .control-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="count-container">
+        <div class="count-number" id="countNumber">1</div>
+        <div class="count-suffix" id="countSuffix"></div>
+    </div>
+    
+    <div class="beat-indicators" id="beatIndicators">
+        <div class="beat-dot downbeat active" data-beat="1"></div>
+        <div class="beat-dot" data-beat="2"></div>
+        <div class="beat-dot" data-beat="3"></div>
+        <div class="beat-dot" data-beat="4"></div>
+    </div>
+    
+    <div class="controls">
+        <div class="tempo-controls">
+            <span>BPM:</span>
+            <input type="range" class="bpm-slider" id="bpmSlider" min="60" max="200" value="120">
+            <div class="bpm-display" id="bpmDisplay">120</div>
+        </div>
+        
+        <div class="subdivision-selector">
+            <button class="subdivision-btn active" data-subdivision="quarter">♩ Quarter</button>
+            <button class="subdivision-btn" data-subdivision="eighth">♫ Eighth</button>
+            <button class="subdivision-btn" data-subdivision="sixteenth">♬ Sixteenth</button>
+        </div>
+        
+        <div class="main-controls">
+            <button class="control-btn" id="playBtn">START</button>
+            <button class="control-btn" id="tapBtn">TAP TEMPO</button>
+        </div>
+    </div>
+
+    <script>
+        class DrumCounter {
+            constructor() {
+                this.isPlaying = false;
+                this.bpm = 120;
+                this.subdivision = 'quarter';
+                this.intervalId = null;
+                this.tapTimes = [];
+                
+                // Simplified state tracking
+                this.currentIndex = 0; // Single index for current position
+                
+                this.subdivisionPatterns = {
+                    quarter: ['1', '2', '3', '4'],
+                    eighth: ['1', '1&', '2', '2&', '3', '3&', '4', '4&'],
+                    sixteenth: ['1', '1e', '1&', '1a', '2', '2e', '2&', '2a', '3', '3e', '3&', '3a', '4', '4e', '4&', '4a']
+                };
+                
+                this.initElements();
+                this.bindEvents();
+                this.updateAll();
+            }
+            
+            initElements() {
+                this.countNumber = document.getElementById('countNumber');
+                this.countSuffix = document.getElementById('countSuffix');
+                this.beatIndicators = document.getElementById('beatIndicators');
+                this.bpmSlider = document.getElementById('bpmSlider');
+                this.bpmDisplay = document.getElementById('bpmDisplay');
+                this.playBtn = document.getElementById('playBtn');
+                this.tapBtn = document.getElementById('tapBtn');
+                this.subdivisionBtns = document.querySelectorAll('.subdivision-btn');
+            }
+            
+            bindEvents() {
+                this.bpmSlider.addEventListener('input', (e) => {
+                    this.setBPM(parseInt(e.target.value));
+                });
+                
+                this.playBtn.addEventListener('click', () => {
+                    this.togglePlay();
+                });
+                
+                this.tapBtn.addEventListener('click', () => {
+                    this.tapTempo();
+                });
+                
+                this.subdivisionBtns.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        this.setSubdivision(e.target.dataset.subdivision);
+                    });
+                });
+                
+                // Spacebar voor start/stop
+                document.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space') {
+                        e.preventDefault();
+                        this.togglePlay();
+                    }
+                });
+            }
+            
+            setBPM(bpm) {
+                this.bpm = bpm;
+                this.bpmDisplay.textContent = bpm;
+                
+                if (this.isPlaying) {
+                    // Clean restart with new timing
+                    clearInterval(this.intervalId);
+                    this.intervalId = setInterval(() => {
+                        this.tick();
+                    }, this.getInterval());
+                }
+            }
+            
+            setSubdivision(subdivision) {
+                if (this.subdivision === subdivision) return;
+                
+                const wasPlaying = this.isPlaying;
+                if (wasPlaying) {
+                    this.stop();
+                }
+                
+                this.subdivision = subdivision;
+                this.currentIndex = 0; // Reset to beginning
+                
+                // Update active button
+                this.subdivisionBtns.forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.dataset.subdivision === subdivision) {
+                        btn.classList.add('active');
+                    }
+                });
+                
+                this.updateAll();
+                
+                if (wasPlaying) {
+                    setTimeout(() => this.start(), 50);
+                }
+            }
+            
+            getInterval() {
+                const baseInterval = (60 / this.bpm) * 1000; // milliseconds per quarter note
+                
+                switch(this.subdivision) {
+                    case 'eighth':
+                        return baseInterval / 2;
+                    case 'sixteenth':
+                        return baseInterval / 4;
+                    default:
+                        return baseInterval;
+                }
+            }
+            
+            togglePlay() {
+                if (this.isPlaying) {
+                    this.stop();
+                } else {
+                    this.start();
+                }
+            }
+            
+            start() {
+                if (this.isPlaying) return;
+                
+                this.isPlaying = true;
+                this.playBtn.textContent = 'STOP';
+                this.playBtn.classList.add('active');
+                
+                this.intervalId = setInterval(() => {
+                    this.tick();
+                }, this.getInterval());
+            }
+            
+            stop() {
+                if (!this.isPlaying) return; // Prevent double stop
+                
+                this.isPlaying = false;
+                this.playBtn.textContent = 'START';
+                this.playBtn.classList.remove('active');
+                
+                if (this.intervalId) {
+                    clearInterval(this.intervalId);
+                    this.intervalId = null;
+                }
+            }
+            
+            tick() {
+                const pattern = this.subdivisionPatterns[this.subdivision];
+                if (!pattern || this.currentIndex >= pattern.length) {
+                    this.currentIndex = 0;
+                }
+                
+                const currentCount = pattern[this.currentIndex];
+                this.updateAll(currentCount);
+                
+                // Move to next position
+                this.currentIndex = (this.currentIndex + 1) % pattern.length;
+            }
+            
+            updateAll(count = null) {
+                const pattern = this.subdivisionPatterns[this.subdivision];
+                if (count === null) {
+                    count = pattern[this.currentIndex] || '1';
+                }
+                
+                // Update display
+                const number = count.charAt(0) || '1';
+                const suffix = count.substring(1) || '';
+                
+                this.countNumber.textContent = number;
+                this.countSuffix.textContent = suffix;
+                
+                // Update beat indicators
+                const currentBeat = this.getCurrentBeat();
+                const dots = this.beatIndicators.querySelectorAll('.beat-dot');
+                dots.forEach((dot, index) => {
+                    const beatNum = index + 1;
+                    if (beatNum === currentBeat) {
+                        dot.classList.add('active');
+                    } else {
+                        dot.classList.remove('active');
+                    }
+                });
+            }
+            
+            getCurrentBeat() {
+                const pattern = this.subdivisionPatterns[this.subdivision];
+                const count = pattern[this.currentIndex] || '1';
+                return parseInt(count.charAt(0)) || 1;
+            }
+            
+            addPulseEffect() {
+                // Pulse effect removed - keeping method for future use
+            }
+            
+            tapTempo() {
+                const now = Date.now();
+                this.tapTimes.push(now);
+                
+                // Keep only last 4 taps
+                if (this.tapTimes.length > 4) {
+                    this.tapTimes.shift();
+                }
+                
+                if (this.tapTimes.length >= 2) {
+                    // Calculate average interval
+                    let totalInterval = 0;
+                    for (let i = 1; i < this.tapTimes.length; i++) {
+                        totalInterval += this.tapTimes[i] - this.tapTimes[i-1];
+                    }
+                    const avgInterval = totalInterval / (this.tapTimes.length - 1);
+                    
+                    // Convert to BPM
+                    const bpm = Math.round(60000 / avgInterval);
+                    
+                    // Clamp to reasonable range
+                    if (bpm >= 60 && bpm <= 200) {
+                        this.setBPM(bpm);
+                        this.bpmSlider.value = bpm;
+                    }
+                }
+                
+                // Visual feedback for tap
+                this.tapBtn.style.background = 'white';
+                this.tapBtn.style.color = 'black';
+                setTimeout(() => {
+                    this.tapBtn.style.background = 'transparent';
+                    this.tapBtn.style.color = 'white';
+                }, 100);
+            }
+        }
+        
+        // Initialize the drum counter when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new DrumCounter();
+        });
+    </script>
+</body>
+</html>
