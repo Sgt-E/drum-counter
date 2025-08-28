@@ -2,7 +2,7 @@
   "name": "Drum Counter",
   "short_name": "DrumCount",
   "description": "Visual drum counting app for practice",
-  "start_url": "/",
+  "start_url": "https://sgt-e.github.io/drum-counter/",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
